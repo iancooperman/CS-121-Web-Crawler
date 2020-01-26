@@ -1,6 +1,7 @@
 import logging
 import re
 from urllib.parse import urlparse
+import lxml.html
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +29,21 @@ class Crawler:
                 if self.is_valid(next_link):
                     if self.corpus.get_file_name(next_link) is not None:
                         self.frontier.add_url(next_link)
+
+    def is_stop_word(self, token):
+        return token.lower() in {
+        'than', "you're", "hasn't", 'again', 'himself', 'was', 'where', 'who', "where's", 'my', 'him', 'against', "it's", 'it', 'before',
+        'could', "i'm", 'ought', "wouldn't", 'but', 'their', "who's", "hadn't", 'off', "that's", 'same', 'down', "i'd", 'they', 'about',
+        'while', 'should', 'no', "don't", 'what', 'few', "i've", 'with', "you'd", 'own', 'its', 'are', 'once', 'nor', 'ours', 'then',
+        'do', "doesn't", "haven't", 'at', 'why', "you'll", 'theirs', "weren't", "she'd", 'in', 'there', 'further', "she'll", 'to',
+        'very', 'herself', 'have', 'ourselves', 'into', "won't", 'during', 'here', "there's", "mustn't", 'and', 'only', 'yourself',
+        'has', 'of', 'whom', 'too', 'until', "let's", "they'll", "we've", 'is', 'between', 'your', 'a', "aren't", "you've", 'does',
+        'you', 'doing', 'the', "they'd", 'such', "wasn't", "here's", 'be', 'from', 'how', 'after', 'above', 'any', "she's", "isn't",
+        "we'd", 'we', 'am', 'having', "couldn't", 'hers', 'not', 'below', "shan't", "we're", "he'd", "they're", 'did', "they've",
+        "he's", "how's", 'because', 'which', 'more', 'on', 'under', "can't", 'me', 'would', 'themselves', 'these', "what's", "he'll",
+        'itself', 'each', 'that', 'them', 'for', 'all', 'our', 'up', "why's", 'or', 'an', 'were', 'through', 'cannot', 'her', "we'll",
+        'yours', "when's", 'other', 'as', 'been', 'over', 'he', 'when', 'had', 'yourselves', 'both', 'she', 'being', "didn't", 'if',
+        'myself', "shouldn't", 'by', 'his', 'i', 'most', 'this', 'so', 'some', "i'll", 'out', 'those'}
 
     def extract_next_links(self, url_data):
         """
