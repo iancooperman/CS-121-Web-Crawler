@@ -1,6 +1,7 @@
 import logging
 import re
 from urllib.parse import urlparse
+from urllib.parse import urljoin
 import lxml.html
 
 logger = logging.getLogger(__name__)
@@ -56,6 +57,21 @@ class Crawler:
         Suggested library: lxml
         """
         outputLinks = []
+
+        # print(url_data["content"])
+        if url_data["content"] != '':
+            doc = lxml.html.fromstring(url_data["content"])
+        else:
+            return outputLinks
+
+        hrefs = doc.xpath("//a/@href")
+        for href in hrefs:
+            if href == '' or href[0] != '#':
+                absolute = urljoin("https://www.ics.uci.edu/", href)
+                # print(absolute)
+                outputLinks.append(absolute)
+
+        
         return outputLinks
 
     def is_valid(self, url):
