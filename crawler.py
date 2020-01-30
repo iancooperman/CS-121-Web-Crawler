@@ -3,6 +3,7 @@ import re
 from urllib.parse import urlparse
 from urllib.parse import urljoin
 import lxml.html
+from time import sleep
 
 logger = logging.getLogger(__name__)
 
@@ -59,15 +60,19 @@ class Crawler:
         outputLinks = []
 
         # print(url_data["content"])
-        if url_data["content"] != '':
+
+        try:
             doc = lxml.html.fromstring(url_data["content"])
-        else:
+        except Exception as e:
+            print(e)
+            sleep(1)
             return outputLinks
+
 
         hrefs = doc.xpath("//a/@href")
         for href in hrefs:
             if href == '' or href[0] != '#':
-                absolute = urljoin("https://www.ics.uci.edu/", href)
+                absolute = urljoin(url_data["url"], href)
                 # print(absolute)
                 outputLinks.append(absolute)
 
