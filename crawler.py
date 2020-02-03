@@ -102,7 +102,7 @@ class Crawler:
         in this method
         """
 
-
+        # restrict the number of similar queries
         try:
             match = re.fullmatch(r"(https{0,1}:\/\/.+)\?.+", url)
             base_url = match.group(1)
@@ -112,6 +112,33 @@ class Crawler:
                 return False
         except AttributeError as e:
             pass
+
+        # limit how deep the url goes
+        slash_count = 0
+        for char in url:
+            if char == "/":
+                slash_count += 1
+
+            if slash_count >= 8:
+                return False
+
+        # limit length of directory names
+        parsed_url = urlparse(url)
+        url_directories = parsed_url.path.split("/")
+
+        url_directory_set = set()
+        for directory in url_directories[:-1]:
+            if len(directory) > 30:
+                return False
+            #
+            # # eliminate urls with repeated directory names
+            # if directory in url_directory_set:
+            #     return False
+            # else:
+            #     url_directory_set.add(directory)
+
+
+
 
 
 
