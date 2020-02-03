@@ -4,8 +4,10 @@ from urllib.parse import urlparse
 from urllib.parse import urljoin
 import lxml.html
 from time import sleep
+from collections import defaultdict
 
 logger = logging.getLogger(__name__)
+
 
 class Crawler:
     """
@@ -16,6 +18,13 @@ class Crawler:
     def __init__(self, frontier, corpus):
         self.frontier = frontier
         self.corpus = corpus
+
+        self.log_file = open("log.txt", "w")
+
+        self.searched_urls = defaultdict(int)
+
+    def __del__(self):
+        self.log_file.close()
 
     def start_crawling(self):
         """
@@ -31,6 +40,8 @@ class Crawler:
                 if self.is_valid(next_link):
                     if self.corpus.get_file_name(next_link) is not None:
                         self.frontier.add_url(next_link)
+
+        # logger.info("Fetching URL %s ... Fetched: %s, Queue size: %s", url, self.frontier.fetched, len(self.frontier))
 
     def is_stop_word(self, token):
         return token.lower() in {
@@ -59,13 +70,18 @@ class Crawler:
         """
         outputLinks = []
 
+        # if not self.is_valid(url_data["url"]):
+        #     return outputLinks
+
         # print(url_data["content"])
 
         try:
             doc = lxml.html.fromstring(url_data["content"])
-        except Exception as e:
-            print(e)
-            sleep(1)
+        except lxml.etree.ParserError as e:
+            print(f"{type(e)} ({url_data['url']}):\n{e}", file=self.log_file)
+            return outputLinks
+        except ValueError as e:
+            print(f"{type(e)} ({url_data['url']}):\n{e}", file=self.log_file)
             return outputLinks
 
 
@@ -85,6 +101,22 @@ class Crawler:
         filter out crawler traps. Duplicated urls will be taken care of by frontier. You don't need to check for duplication
         in this method
         """
+
+
+        try:
+            match = re.fullmatch(r"(https{0,1}:\/\/.+)\?.+", url)
+            base_url = match.group(1)
+            self.searched_urls[base_url] += 1
+
+            if self.searched_urls[base_url] > 500:
+                return False
+        except AttributeError as e:
+            pass
+
+
+
+
+
         parsed = urlparse(url)
         if parsed.scheme not in set(["http", "https"]):
             return False

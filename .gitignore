@@ -196,3 +196,8 @@ dmypy.json
 .pyre/
 
 # End of https://www.gitignore.io/api/python,pycharm
+*.txt
+*.pdf
+*spacetime_crawler_data/
+*frontier_state/
+*.idea/
