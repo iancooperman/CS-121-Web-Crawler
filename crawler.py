@@ -66,9 +66,6 @@ class Crawler:
                     if self.corpus.get_file_name(next_link) is not None:
                         self.frontier.add_url(next_link)
                         out_link_count += 1
-
-                    # Analytic #3a: list of downloaded URLs
-                        self.downloaded_urls.add(next_link)
                 else:
                     # Analytic #3b: list of identified traps
                     self.identified_traps.add(next_link)
@@ -134,6 +131,8 @@ class Crawler:
 
         Suggested library: lxml
         """
+
+
         # Ban non-text/HTML type documents
         try:
             if not re.search(r"text", url_data["content_type"]):
@@ -147,15 +146,14 @@ class Crawler:
         else:
             url = url_data["url"]
 
+        # Analytic #3a: list of downloaded URLs
+        self.downloaded_urls.add(url)
 
-        # Analytic #1: subdomain
+
+        # Analytic #1: subdomains
         self.visited_subdomains[urlparse(url).netloc] += 1
 
         outputLinks = []
-
-        # if not self.is_valid(url):
-        #     return outputLinks
-
 
         try:
             doc = BeautifulSoup(url_data["content"], features='lxml')
@@ -165,8 +163,6 @@ class Crawler:
         except ValueError as e:
             print(f"{type(e)} ({url_data['url']}):\n{e}", file=self.log_file)
             return outputLinks
-
-
 
         a_tags = doc.find_all('a', href=True)
         for a_tag in a_tags:
@@ -192,13 +188,6 @@ class Crawler:
             if self.is_not_stop_word(word):
                 self.words[word] += 1
 
-        # sorted_words = sorted(self.words)
-        # for word in range(0,50):
-        #     pass
-
-
-
-        
         return outputLinks
 
     def create_output_file(self):
@@ -224,7 +213,6 @@ class Crawler:
                     file.write(f"{trap}\n")
                 except UnicodeEncodeError:
                     pass
-
 
         with open("most_words.txt", "w") as file:
             file.write(f"{self.url_of_max_words} has {self.max_words} words\n")
@@ -255,7 +243,7 @@ class Crawler:
             if slash_count >= 8:
                 return False
 
-        # limit length of directory names
+
         parsed_url = urlparse(url)
         url_directories = parsed_url.path.split("/")
 
@@ -263,14 +251,15 @@ class Crawler:
         for directory in url_directories[:-1]:
             if directory.lower() == "files":
                 return False
+            # limit length of directory names
             if len(directory) > 30:
                 return False
-            #
-            # # eliminate urls with repeated directory names
-            # if directory in url_directory_set:
-            #     return False
-            # else:
-            #     url_directory_set.add(directory)
+
+            # eliminate urls with repeated directory names
+            if directory.lower() in url_directory_set:
+                return False
+            else:
+                url_directory_set.add(directory.lower())
 
 
         # restrict the number of similar queries
@@ -294,6 +283,7 @@ class Crawler:
         except AttributeError as e:
             pass
 
+        # what was here before. NO TOUCHIE
         parsed = urlparse(url)
         if parsed.scheme not in set(["http", "https"]):
             return False
