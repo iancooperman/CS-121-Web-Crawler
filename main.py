@@ -20,7 +20,8 @@ if __name__ == "__main__":
     corpus = Corpus(sys.argv[1])
 
     # Registers a shutdown hook to save frontier state upon unexpected shutdown
-    atexit.register(frontier.save_frontier)
+    # atexit.register(frontier.save_frontier)
+    # UNCOMMENT THIS LATER
 
     # Instantiates a crawler object and starts crawling
     crawler = Crawler(frontier, corpus)

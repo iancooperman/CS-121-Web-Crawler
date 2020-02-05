@@ -4,7 +4,7 @@ from urllib.parse import urlparse
 from urllib.parse import urljoin
 import lxml.html
 from bs4 import BeautifulSoup
-from time import sleep
+import time
 from collections import defaultdict
 
 logger = logging.getLogger(__name__)
@@ -44,9 +44,19 @@ class Crawler:
         This method starts the crawling process which is scraping urls from the next available link in frontier and adding
         the scraped links to the frontier
         """
+        print_start = time.time()
+        start = time.time()
+
         while self.frontier.has_next_url():
             url = self.frontier.get_next_url()
-            # logger.info("Fetching URL %s ... Fetched: %s, Queue size: %s", url, self.frontier.fetched, len(self.frontier))
+            # limit output to every 30 seconds or so
+            if time.time() - start > 15:
+                # logger.info("Fetching URL %s ... Fetched: %s, Queue size: %s", url, self.frontier.fetched, len(self.frontier))
+                logger.info("Fetched: %s, Queue size: %s",self.frontier.fetched, len(self.frontier))
+                start = time.time()
+            # if time.time() - print_start > 10:
+            #     self.create_output_file()
+            #     quit()
             url_data = self.corpus.fetch_url(url)
 
             out_link_count = 0
@@ -72,7 +82,7 @@ class Crawler:
                 else:
                     self.url_with_most_out_links = url_data["url"]
 
-        # logger.info("Fetching URL %s ... Fetched: %s, Queue size: %s", url, self.frontier.fetched, len(self.frontier))
+        logger.info("Fetched: %s, Queue size: %s",self.frontier.fetched, len(self.frontier))
 
         self.create_output_file()
 
@@ -103,7 +113,6 @@ class Crawler:
         word_list = []
         character_list = []
         for char in text:
-            character_list = []
             if is_ascii(char):
                 character_list.append(char.lower())
             else:
@@ -147,16 +156,24 @@ class Crawler:
         # if not self.is_valid(url):
         #     return outputLinks
 
-        # print(url_data["content"])
 
         try:
-            doc = BeautifulSoup(url_data["content"])
+            doc = BeautifulSoup(url_data["content"], features='lxml')
         except lxml.etree.ParserError as e:
             print(f"{type(e)} ({url_data['url']}):\n{e}", file=self.log_file)
             return outputLinks
         except ValueError as e:
             print(f"{type(e)} ({url_data['url']}):\n{e}", file=self.log_file)
             return outputLinks
+
+
+
+        a_tags = doc.find_all('a', href=True)
+        for a_tag in a_tags:
+            href = a_tag["href"]
+            if href == '' or href[0] != '#':
+                absolute = urljoin(url, href)
+                outputLinks.append(absolute)
 
 
         doc_text = doc.get_text()
@@ -168,8 +185,10 @@ class Crawler:
             self.max_words = len_doc_words
             self.url_of_max_words = url
 
+
         # Analytic #5: 50 most common words
         for word in self.tokenize(doc_text):
+
             if self.is_not_stop_word(word):
                 self.words[word] += 1
 
@@ -178,14 +197,6 @@ class Crawler:
         #     pass
 
 
-
-        a_tags = doc.find_all('a', href=True)
-        for a_tag in a_tags:
-            href = a_tag["href"]
-            if href == '' or href[0] != '#':
-                absolute = urljoin(url, href)
-                # print(absolute)
-                outputLinks.append(absolute)
 
         
         return outputLinks
@@ -198,7 +209,7 @@ class Crawler:
                 times_visited = subdomain_pair[1]
                 file.write(f"{subdomain} visited {times_visited} times\n")
 
-        with open("valid_outlinks.txt", "w") as file:
+        with open("most_valid_outlinks.txt", "w") as file:
             file.write(f"{self.url_with_most_out_links} has {self.most_out_links} outlinks\n")
 
         with open("urls_and_traps.txt", "w") as file:
@@ -220,6 +231,7 @@ class Crawler:
 
         with open("most_common_words.txt", "w") as file:
             sorted_word_frequencies = sorted(self.words.items(), key=lambda x: x[1], reverse=True)
+            assert len(self.words) > 0
             for word_pair_location in range(0, 50):
                 word = sorted_word_frequencies[word_pair_location][0]
                 frequency = sorted_word_frequencies[word_pair_location][1]
