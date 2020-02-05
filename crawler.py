@@ -101,11 +101,12 @@ class Crawler:
     def tokenize(self, text: str) -> list:
         # O(1), as checking containment with a hash-set is.
         def is_ascii(c: str) -> bool:
+            # for practicality's sake, single-quote is considered alphanumeric
             return c in {'R', 'z', 'p', 'T', 'A', 'H', 'E', 'X', '8', 'J', 'k', 'g', '1', '5', 'e', 'C', 'f', 'd', 'a',
                          'l', 'B', 'c',
                          'q', 'x', '9', 'Y', 'G', 'u', '6', 'D', '4', 'v', 'U', 't', 'i', 'Q', 'L', 'h', '2', 'Z', 'I',
                          'o', 'F', 'O',
-                         'm', '0', 's', 'n', 'b', 'K', 'V', 'y', 'S', 'W', 'M', 'r', 'j', 'w', '3', 'N', 'P', '7'}
+                         'm', '0', 's', 'n', 'b', 'K', 'V', 'y', 'S', 'W', 'M', 'r', 'j', 'w', '3', 'N', 'P', '7', "'"}
 
         word_list = []
         character_list = []
@@ -114,9 +115,13 @@ class Crawler:
                 character_list.append(char.lower())
             else:
                 if len(character_list) > 0:
-                    word_list.append("".join(character_list))
+                    # Per Piazza question "what is considered a word?", ignoring "words" less than 2 characters long
+                    if len(character_list) >= 2:
+                        word_list.append("".join(character_list))
                     character_list = []
-        if len(character_list) > 0:
+
+        # Per Piazza question "what is considered a word?", ignoring "words" less than 2 characters long
+        if len(character_list) >= 2:
             word_list.append("".join(character_list))
 
         return word_list
@@ -140,11 +145,16 @@ class Crawler:
         except TypeError as e:
             return []
 
+        # use relevant url depending on redirection
         url = ""
         if url_data["is_redirected"]:
             url = url_data["final_url"]
         else:
             url = url_data["url"]
+
+        # some final_urls are offsite
+        if not ".ics.uci.edu" in url:
+            return []
 
         # Analytic #3a: list of downloaded URLs
         self.downloaded_urls.add(url)
@@ -155,6 +165,7 @@ class Crawler:
 
         outputLinks = []
 
+        # get document content
         try:
             doc = BeautifulSoup(url_data["content"], features='lxml')
         except lxml.etree.ParserError as e:
@@ -171,8 +182,9 @@ class Crawler:
                 absolute = urljoin(url, href)
                 outputLinks.append(absolute)
 
-
+        # get document text
         doc_text = doc.get_text()
+        # tokenization
         doc_words = self.tokenize(doc_text)
 
         # Analytic #4: Longest page in terms of words
@@ -184,7 +196,6 @@ class Crawler:
 
         # Analytic #5: 50 most common words
         for word in self.tokenize(doc_text):
-
             if self.is_not_stop_word(word):
                 self.words[word] += 1
 
@@ -235,31 +246,36 @@ class Crawler:
         """
 
         # limit how deep the url goes
-        slash_count = 0
-        for char in url:
-            if char == "/":
-                slash_count += 1
-
-            if slash_count >= 8:
-                return False
+        # slash_count = 0
+        # for char in url:
+        #     if char == "/":
+        #         slash_count += 1
+        #
+        #     if slash_count >= 8:
+        #         return False
 
 
         parsed_url = urlparse(url)
         url_directories = parsed_url.path.split("/")
 
+        # limit how deep the url goes, keep path from going down greater than 6 directories
+        if len(url_directories) > 6:
+            return False
+
         url_directory_set = set()
         for directory in url_directories[:-1]:
-            if directory.lower() == "files":
+            directory_lower = directory.lower()
+            if directory_lower == "files":
                 return False
             # limit length of directory names
             if len(directory) > 30:
                 return False
 
             # eliminate urls with repeated directory names
-            if directory.lower() in url_directory_set:
+            if directory_lower in url_directory_set:
                 return False
             else:
-                url_directory_set.add(directory.lower())
+                url_directory_set.add(directory_lower)
 
 
         # restrict the number of similar queries
@@ -273,6 +289,7 @@ class Crawler:
         except AttributeError as e:
             pass
 
+        # keep links to somewhere in the same page to a minimum
         try:
             match = re.fullmatch(r"(.+)#.*", url)
             base_url = match.group(1)
